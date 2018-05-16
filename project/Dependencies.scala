@@ -8,6 +8,10 @@ object Dependencies {
     CSW.`csw-location`,
     CSW.`csw-messages`,
     CSW.`csw-logging`,
+    Akka.`akka-actor`,
+    Akka.`akka-slf4j`,
+    Akka.`akka-remote`,
+    Akka.`akka-actor-typed`,
     Libs.`scalatest` % Test,
     Libs.`junit` % Test,
     Libs.`junit-interface` % Test
@@ -19,6 +23,10 @@ object Dependencies {
     CSW.`csw-location`,
     CSW.`csw-messages`,
     CSW.`csw-logging`,
+    Akka.`akka-actor`,
+    Akka.`akka-slf4j`,
+    Akka.`akka-remote`,
+    Akka.`akka-actor-typed`,
     Libs.`scalatest` % Test,
     Libs.`junit` % Test,
     Libs.`junit-interface` % Test

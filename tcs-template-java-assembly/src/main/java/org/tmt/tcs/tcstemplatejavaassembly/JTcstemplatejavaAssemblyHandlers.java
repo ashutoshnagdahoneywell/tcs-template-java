@@ -1,5 +1,6 @@
 package org.tmt.tcs.tcstemplatejavaassembly;
 
+import akka.actor.typed.ActorRef;
 import akka.actor.typed.javadsl.ActorContext;
 import csw.framework.javadsl.JComponentHandlers;
 import csw.framework.scaladsl.CurrentStatePublisher;
@@ -32,6 +33,8 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
     private ILocationService locationService;
     private ComponentInfo componentInfo;
 
+    private ActorRef<JCommandHandlerActor.CommandMessage> commandHandlerActor;
+
     JTcstemplatejavaAssemblyHandlers(
             ActorContext<TopLevelActorMessage> ctx,
             ComponentInfo componentInfo,
@@ -47,12 +50,24 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
         this.actorContext = ctx;
         this.locationService = locationService;
         this.componentInfo = componentInfo;
+
+
+
+        commandHandlerActor = ctx.spawnAnonymous(JCommandHandlerActor.behavior(loggerFactory));
     }
+
+
+
+
 
     @Override
     public CompletableFuture<Void> jInitialize() {
         return CompletableFuture.runAsync(() -> {
             log.debug("in initialize()");
+
+            commandHandlerActor.tell(new JCommandHandlerActor.GoOnlineMessage());
+
+
         });
     }
 
