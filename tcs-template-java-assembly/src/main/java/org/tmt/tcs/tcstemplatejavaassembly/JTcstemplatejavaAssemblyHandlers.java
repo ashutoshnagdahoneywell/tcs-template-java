@@ -7,13 +7,18 @@ import csw.framework.scaladsl.CurrentStatePublisher;
 import csw.messages.commands.CommandResponse;
 import csw.messages.commands.ControlCommand;
 import csw.messages.framework.ComponentInfo;
-import csw.messages.location.TrackingEvent;
+import csw.messages.location.*;
 import csw.messages.scaladsl.TopLevelActorMessage;
+import csw.services.command.javadsl.JCommandService;
 import csw.services.command.scaladsl.CommandResponseManager;
+import csw.services.command.scaladsl.CommandService;
 import csw.services.location.javadsl.ILocationService;
 import csw.services.logging.javadsl.ILogger;
 import csw.services.logging.javadsl.JLoggerFactory;
+import scala.None;
+import scala.Option;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -34,6 +39,12 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
     private ComponentInfo componentInfo;
 
     private ActorRef<JCommandHandlerActor.CommandMessage> commandHandlerActor;
+    private ActorRef<JEventHandlerActor.EventMessage> eventHandlerActor;
+    private ActorRef<JLifecycleActor.LifecycleMessage> lifecycleActor;
+    private ActorRef<JMonitorActor.MonitorMessage> monitorActor;
+
+    // reference to the template HCD
+    private Optional<JCommandService> templateHcd = Optional.empty();  // NOTE the use of Optional
 
     JTcstemplatejavaAssemblyHandlers(
             ActorContext<TopLevelActorMessage> ctx,
@@ -53,7 +64,15 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
 
 
 
-        commandHandlerActor = ctx.spawnAnonymous(JCommandHandlerActor.behavior(loggerFactory));
+
+
+        commandHandlerActor = ctx.spawnAnonymous(JCommandHandlerActor.behavior(commandResponseManager, templateHcd, Boolean.TRUE, loggerFactory));
+
+        eventHandlerActor = ctx.spawnAnonymous(JEventHandlerActor.behavior(loggerFactory));
+
+        lifecycleActor = ctx.spawnAnonymous(JLifecycleActor.behavior(loggerFactory));
+
+        monitorActor = ctx.spawnAnonymous(JMonitorActor.behavior(JMonitorActor.AssemblyState.Ready, JMonitorActor.AssemblyMotionState.Idle, loggerFactory));
     }
 
 
@@ -80,18 +99,36 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
 
     @Override
     public void onLocationTrackingEvent(TrackingEvent trackingEvent) {
+
         log.debug("in onLocationTrackingEvent()");
+
+        if (trackingEvent instanceof LocationUpdated) {
+            // do something for the tracked location when it is updated
+
+            AkkaLocation hcdLocation = (AkkaLocation)((LocationUpdated) trackingEvent).location();
+
+            templateHcd = Optional.of(new JCommandService(hcdLocation, actorContext.getSystem()));
+
+
+        } else if (trackingEvent instanceof LocationRemoved) {
+            // do something for the tracked location when it is no longer available
+        }
+
+
     }
 
     @Override
     public CommandResponse validateCommand(ControlCommand controlCommand) {
         log.debug("in validateCommand()");
-        return null;
+        return new CommandResponse.Accepted(controlCommand.runId());
     }
 
     @Override
     public void onSubmit(ControlCommand controlCommand) {
+
         log.debug("in onSubmit()");
+
+        commandHandlerActor.tell(new JCommandHandlerActor.SubmitCommandMessage(controlCommand));
     }
 
     @Override
