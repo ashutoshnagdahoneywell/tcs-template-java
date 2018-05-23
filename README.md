@@ -174,9 +174,6 @@ TBD
 
 
 
-
-
-
 ## Build Instructions
 
 The build is based on sbt and depends on libraries published to bintray from the 
