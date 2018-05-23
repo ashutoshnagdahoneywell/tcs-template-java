@@ -4,6 +4,7 @@ import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.ReceiveBuilder;
+import com.typesafe.config.Config;
 import csw.services.logging.javadsl.ILogger;
 import csw.services.logging.javadsl.JLoggerFactory;
 //import akka.actor.typed.javadsl.MutableBehavior;
@@ -20,19 +21,21 @@ public class JLifecycleActor extends Behaviors.MutableBehavior<JLifecycleActor.L
 
     private ActorContext<LifecycleMessage> actorContext;
     private JLoggerFactory loggerFactory;
+    private Config assemblyConfig;
     private ILogger log;
 
 
-    private JLifecycleActor(ActorContext<LifecycleMessage> actorContext, JLoggerFactory loggerFactory) {
+    private JLifecycleActor(ActorContext<LifecycleMessage> actorContext, Config assemblyConfig, JLoggerFactory loggerFactory) {
         this.actorContext = actorContext;
         this.loggerFactory = loggerFactory;
         this.log = loggerFactory.getLogger(actorContext, getClass());
+        this.assemblyConfig = assemblyConfig;
 
     }
 
-    public static <LifecycleMessage> Behavior<LifecycleMessage> behavior(JLoggerFactory loggerFactory) {
+    public static <LifecycleMessage> Behavior<LifecycleMessage> behavior(Config assemblyConfig, JLoggerFactory loggerFactory) {
         return Behaviors.setup(ctx -> {
-            return (Behaviors.MutableBehavior<LifecycleMessage>) new JLifecycleActor((ActorContext<JLifecycleActor.LifecycleMessage>) ctx, loggerFactory);
+            return (Behaviors.MutableBehavior<LifecycleMessage>) new JLifecycleActor((ActorContext<JLifecycleActor.LifecycleMessage>) ctx, assemblyConfig, loggerFactory);
         });
     }
 
@@ -60,9 +63,10 @@ public class JLifecycleActor extends Behaviors.MutableBehavior<JLifecycleActor.L
 
         log.info("Initialize Message Received ");
 
-        // TODO: example of working with Config
-       // val bazValue: Int = assemblyConfig.getInt("foo.bar.baz")
-       // log.debug(s"foo.bar.baz config element value is: $bazValue")
+        // example of working with Config
+        Integer bazValue = assemblyConfig.getInt("foo.bar.baz");
+
+       log.debug("foo.bar.baz config element value is: " + bazValue);
 
     }
 

@@ -1,7 +1,14 @@
 package org.tmt.tcs.tcstemplatejavaassembly;
 
+import akka.actor.ActorRefFactory;
 import akka.actor.typed.ActorRef;
+import akka.actor.typed.ActorSystem;
 import akka.actor.typed.javadsl.ActorContext;
+import akka.actor.typed.javadsl.Adapter;
+import akka.stream.ActorMaterializer;
+import akka.stream.Materializer;
+import com.typesafe.config.Config;
+import csw.framework.exceptions.FailureStop;
 import csw.framework.javadsl.JComponentHandlers;
 import csw.framework.scaladsl.CurrentStatePublisher;
 import csw.messages.commands.CommandResponse;
@@ -12,14 +19,25 @@ import csw.messages.scaladsl.TopLevelActorMessage;
 import csw.services.command.javadsl.JCommandService;
 import csw.services.command.scaladsl.CommandResponseManager;
 import csw.services.command.scaladsl.CommandService;
+import csw.services.config.api.javadsl.IConfigClientService;
+import csw.services.config.api.models.ConfigData;
+import csw.services.config.client.internal.ActorRuntime;
+import csw.services.config.client.javadsl.JConfigClientFactory;
+
 import csw.services.location.javadsl.ILocationService;
 import csw.services.logging.javadsl.ILogger;
 import csw.services.logging.javadsl.JLoggerFactory;
 import scala.None;
 import scala.Option;
+import scala.concurrent.Await;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Domain specific logic should be written in below handlers.
@@ -37,6 +55,7 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
     private ActorContext<TopLevelActorMessage> actorContext;
     private ILocationService locationService;
     private ComponentInfo componentInfo;
+    private IConfigClientService clientApi;
 
     private ActorRef<JCommandHandlerActor.CommandMessage> commandHandlerActor;
     private ActorRef<JEventHandlerActor.EventMessage> eventHandlerActor;
@@ -63,16 +82,21 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
         this.componentInfo = componentInfo;
 
 
+        // Handle to the config client service
+        clientApi = JConfigClientFactory.clientApi(Adapter.toUntyped(actorContext.getSystem()), locationService);
 
 
+        // Load the configuration from the configuration service
+        Config assemblyConfig = getAssemblyConfig();
 
         commandHandlerActor = ctx.spawnAnonymous(JCommandHandlerActor.behavior(commandResponseManager, templateHcd, Boolean.TRUE, loggerFactory));
 
         eventHandlerActor = ctx.spawnAnonymous(JEventHandlerActor.behavior(loggerFactory));
 
-        lifecycleActor = ctx.spawnAnonymous(JLifecycleActor.behavior(loggerFactory));
+        lifecycleActor = ctx.spawnAnonymous(JLifecycleActor.behavior(assemblyConfig, loggerFactory));
 
         monitorActor = ctx.spawnAnonymous(JMonitorActor.behavior(JMonitorActor.AssemblyState.Ready, JMonitorActor.AssemblyMotionState.Idle, loggerFactory));
+
     }
 
 
@@ -84,8 +108,7 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
         return CompletableFuture.runAsync(() -> {
             log.debug("in initialize()");
 
-            commandHandlerActor.tell(new JCommandHandlerActor.GoOnlineMessage());
-
+             lifecycleActor.tell(new JLifecycleActor.InitializeMessage());
 
         });
     }
@@ -94,6 +117,8 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
     public CompletableFuture<Void> jOnShutdown() {
         return CompletableFuture.runAsync(() -> {
             log.debug("in onShutdown()");
+
+            lifecycleActor.tell(new JLifecycleActor.ShutdownMessage());
         });
     }
 
@@ -139,10 +164,58 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
     @Override
     public void onGoOffline() {
         log.debug("in onGoOffline()");
+
+        commandHandlerActor.tell(new JCommandHandlerActor.GoOfflineMessage());
+
+
     }
 
     @Override
     public void onGoOnline() {
         log.debug("in onGoOnline()");
+
+        commandHandlerActor.tell(new JCommandHandlerActor.GoOnlineMessage());
+
+
     }
+
+    public class ConfigNotAvailableException extends FailureStop {
+
+        public ConfigNotAvailableException() {
+            super("Configuration not available. Initialization failure.");
+        }
+    }
+
+    private Config getAssemblyConfig() {
+
+        try {
+            ActorRefFactory actorRefFactory = Adapter.toUntyped(actorContext.getSystem());
+
+            ActorRuntime actorRuntime = new ActorRuntime(Adapter.toUntyped(actorContext.getSystem()));
+
+            Materializer mat = actorRuntime.mat();
+
+            ConfigData configData = getAssemblyConfigData();
+
+            return configData.toJConfigObject(mat).get();
+
+        } catch (Exception e) {
+            throw new ConfigNotAvailableException();
+        }
+
+    }
+
+    private ConfigData getAssemblyConfigData() throws ExecutionException, InterruptedException {
+
+        log.info("loading assembly configuration");
+
+        // construct the path
+        Path filePath = Paths.get("/org/tmt/tcs/tcs_test.conf");
+
+        ConfigData activeFile = clientApi.getActive(filePath).get().get();
+
+        return activeFile;
+    }
+
+
 }
