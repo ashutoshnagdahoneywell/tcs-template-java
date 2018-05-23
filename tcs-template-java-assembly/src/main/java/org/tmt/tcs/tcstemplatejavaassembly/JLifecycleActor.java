@@ -13,7 +13,7 @@ public class JLifecycleActor extends Behaviors.MutableBehavior<JLifecycleActor.L
 
 
     // add messages here
-    static interface LifecycleMessage {}
+    interface LifecycleMessage {}
 
     public static final class InitializeMessage implements LifecycleMessage { }
     public static final class ShutdownMessage implements LifecycleMessage { }

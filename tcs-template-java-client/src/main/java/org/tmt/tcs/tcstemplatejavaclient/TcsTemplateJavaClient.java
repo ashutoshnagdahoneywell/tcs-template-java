@@ -126,6 +126,33 @@ public class TcsTemplateJavaClient {
 
     }
 
+
+    /**
+     * Sends a datum message to the Assembly and returns the response
+     */
+    public CompletableFuture<CommandResponse> move(Optional<ObsId> obsId, String axes, Double az, Double el) throws Exception {
+
+        //Optional<JCommandService> commandServiceOptional = getAssemblyBlocking();
+
+        if (commandServiceOptional.isPresent()) {
+
+            JCommandService commandService = commandServiceOptional.get();
+
+            Setup setup = new Setup(source, new CommandName("move"), obsId)
+                    .add(axesKey.set(axes))
+                    .add(azKey.set(az))
+                    .add(elKey.set(el));
+
+            return commandService.submitAndSubscribe(setup, Timeout.durationToTimeout(FiniteDuration.apply(20, TimeUnit.SECONDS)));
+
+        } else {
+
+            return CompletableFuture.completedFuture(new CommandResponse.Error(new Id(""), "Can't locate Assembly"));
+        }
+
+
+    }
+
 }
 
 

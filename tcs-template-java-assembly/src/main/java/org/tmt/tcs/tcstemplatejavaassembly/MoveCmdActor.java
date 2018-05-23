@@ -78,13 +78,7 @@ public class MoveCmdActor extends Behaviors.MutableBehavior<ControlCommand> {
         Parameter azParam = message.paramSet().find(x -> x.keyName().equals("az")).get();
         Parameter elParam = message.paramSet().find(x -> x.keyName().equals("el")).get();
 
-       // create Point and PointDemand messages and send to HCD
-
-        ObsId obsId = message.maybeObsId().get();
-
-        Optional.of(message.maybeObsId());
-
-
+        // create Point and PointDemand messages and send to HCD
 
         CompletableFuture<CommandResponse> moveFuture = move(message.maybeObsId(), axesParam, azParam, elParam);
 
@@ -118,13 +112,7 @@ public class MoveCmdActor extends Behaviors.MutableBehavior<ControlCommand> {
                                             Parameter azParam,
                                             Parameter elParam) {
 
-
         if (templateHcd.isPresent()) {
-
-            return CompletableFuture.completedFuture(new CommandResponse.Error(new Id(""), "Can't locate TcsTemplateHcd"));
-
-
-        } else {
 
             Setup setupHcd1 = new Setup(templateHcdPrefix, new CommandName("point"), Optional.empty()).add(axesParam);
             Setup setupHcd2 = new Setup(templateHcdPrefix, new CommandName("pointDemand"), Optional.empty()).add(azParam).add(elParam);
@@ -136,13 +124,16 @@ public class MoveCmdActor extends Behaviors.MutableBehavior<ControlCommand> {
             };
 
             CompletableFuture<CommandResponse> commandResponse = templateHcd.get()
-                    .submitAllAndGetResponse(
+                    .submitAllAndGetFinalResponse(
                             new HashSet<ControlCommand>(Arrays.asList(setupHcd1, setupHcd2)),
                             Timeout.durationToTimeout(FiniteDuration.apply(5, TimeUnit.SECONDS))
                     );
 
             return commandResponse;
 
+        } else {
+
+            return CompletableFuture.completedFuture(new CommandResponse.Error(new Id(""), "Can't locate TcsTemplateHcd"));
         }
 
     }

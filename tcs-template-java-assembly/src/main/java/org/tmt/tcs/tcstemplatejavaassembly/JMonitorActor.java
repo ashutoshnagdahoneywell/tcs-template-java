@@ -4,12 +4,14 @@ import akka.actor.typed.Behavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.ReceiveBuilder;
-import akka.japi.Option;
-import csw.services.command.scaladsl.CommandService;
+
+import csw.services.command.javadsl.JCommandService;
 import csw.services.logging.javadsl.ILogger;
 import csw.services.logging.javadsl.JLoggerFactory;
 
-//import akka.actor.typed.javadsl.MutableBehavior;
+import java.util.Optional;
+
+
 
 public class JMonitorActor extends Behaviors.MutableBehavior<JMonitorActor.MonitorMessage> {
 
@@ -22,7 +24,7 @@ public class JMonitorActor extends Behaviors.MutableBehavior<JMonitorActor.Monit
     }
 
     // add messages here
-    static interface MonitorMessage {}
+    interface MonitorMessage {}
 
     public static final class AssemblyStateChangeMessage implements MonitorMessage {
 
@@ -43,9 +45,9 @@ public class JMonitorActor extends Behaviors.MutableBehavior<JMonitorActor.Monit
 
     public static final class LocationEventMessage implements MonitorMessage {
 
-        public final Option<CommandService> templateHcd;
+        public final Optional<JCommandService> templateHcd;
 
-        public LocationEventMessage(Option<CommandService> templateHcd) {
+        public LocationEventMessage(Optional<JCommandService> templateHcd) {
             this.templateHcd = templateHcd;
         }
     }
@@ -99,16 +101,17 @@ public class JMonitorActor extends Behaviors.MutableBehavior<JMonitorActor.Monit
 
     private Behavior<MonitorMessage> onLocationEventMessage(LocationEventMessage message) {
 
-        if (message.templateHcd.isEmpty() ) {
-            // if templateHcd is null, then change state to disconnected
-            return JMonitorActor.behavior(AssemblyState.Disconnected, assemblyMotionState, loggerFactory);
-        } else {
-            if (assemblyState == AssemblyState.Disconnected) {
+        if (message.templateHcd.isPresent() ) {
+
+             if (assemblyState == AssemblyState.Disconnected) {
                 // TODO: this logic is oversimplified: just because the state is no longer disconnected, does not mean it is Ready
                 return JMonitorActor.behavior(AssemblyState.Ready, assemblyMotionState, loggerFactory);
             } else {
                 return this;
             }
+        } else {
+            // if templateHcd is null, then change state to disconnected
+            return JMonitorActor.behavior(AssemblyState.Disconnected, assemblyMotionState, loggerFactory);
         }
     }
 

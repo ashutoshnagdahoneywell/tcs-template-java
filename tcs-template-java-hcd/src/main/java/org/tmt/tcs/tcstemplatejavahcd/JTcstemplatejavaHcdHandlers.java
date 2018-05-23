@@ -70,11 +70,38 @@ public class JTcstemplatejavaHcdHandlers extends JComponentHandlers {
 
     @Override
     public CommandResponse validateCommand(ControlCommand controlCommand) {
-        return null;
+
+        return new CommandResponse.Accepted(controlCommand.runId());
     }
 
     @Override
     public void onSubmit(ControlCommand controlCommand) {
+
+        switch (controlCommand.commandName().name()) {
+
+            case "point":
+                log.debug("handling point command: " + controlCommand);
+
+                try { Thread.sleep(500); } catch (InterruptedException e) {};
+
+                commandResponseManager.addOrUpdateCommand(controlCommand.runId(), new CommandResponse.Completed(controlCommand.runId()));
+
+                break;
+
+            case "pointDemand":
+                log.debug("handling pointDemand command: " + controlCommand);
+
+                try { Thread.sleep(1000); } catch (InterruptedException e) {};
+
+                commandResponseManager.addOrUpdateCommand(controlCommand.runId(), new CommandResponse.Completed(controlCommand.runId()));
+
+                break;
+
+            default:
+                log.error("unhandled message in Monitor Actor onMessage: " + controlCommand);
+                // maintain actor state
+
+        }
 
     }
 

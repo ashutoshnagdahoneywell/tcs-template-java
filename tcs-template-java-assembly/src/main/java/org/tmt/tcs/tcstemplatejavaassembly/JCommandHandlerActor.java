@@ -9,7 +9,6 @@ import akka.actor.typed.javadsl.ReceiveBuilder;
 import csw.messages.commands.ControlCommand;
 import csw.services.command.javadsl.JCommandService;
 import csw.services.command.scaladsl.CommandResponseManager;
-import csw.services.command.scaladsl.CommandService;
 import org.tmt.tcs.tcstemplatejavaassembly.JCommandHandlerActor.CommandMessage;
 import csw.services.logging.javadsl.ILogger;
 import csw.services.logging.javadsl.JLoggerFactory;
@@ -21,7 +20,7 @@ public class JCommandHandlerActor extends Behaviors.MutableBehavior<CommandMessa
 
 
     // add messages here
-    static interface CommandMessage {}
+    interface CommandMessage {}
 
     public static final class SubmitCommandMessage implements CommandMessage {
 
@@ -38,11 +37,10 @@ public class JCommandHandlerActor extends Behaviors.MutableBehavior<CommandMessa
 
     public static final class UpdateTemplateHcdMessage implements CommandMessage {
 
-        // TODO: how does Java implement Option<>
-        public final CommandService commandService;
+        public final Optional<JCommandService> commandServiceOptional;
 
-        public UpdateTemplateHcdMessage(CommandService commandService) {
-            this.commandService = commandService;
+        public UpdateTemplateHcdMessage(Optional<JCommandService> commandServiceOptional) {
+            this.commandServiceOptional = commandServiceOptional;
         }
     }
 
@@ -87,11 +85,24 @@ public class JCommandHandlerActor extends Behaviors.MutableBehavior<CommandMessa
                             handleDatumCommand(command.controlCommand);
                             return Behaviors.same();
                         })
+                .onMessage(SubmitCommandMessage.class,
+                        command -> command.controlCommand.commandName().name().equals("move"),
+                        command -> {
+                            log.info("MoveMessage Received");
+                            handleMoveCommand(command.controlCommand);
+                            return Behaviors.same();
+                        })
                 .onMessage(GoOnlineMessage.class,
                         command -> {
                             log.info("GoOnlineMessage Received");
                             // change the behavior to online
                             return behavior(commandResponseManager, templateHcd, Boolean.TRUE, loggerFactory);
+                        })
+                .onMessage(UpdateTemplateHcdMessage.class,
+                        command -> {
+                            log.info("UpdateTemplateHcdMessage Received");
+                            // update the template hcd
+                            return behavior(commandResponseManager, command.commandServiceOptional, online, loggerFactory);
                         })
                 .onMessage(GoOfflineMessage.class,
                         command -> {
@@ -99,6 +110,7 @@ public class JCommandHandlerActor extends Behaviors.MutableBehavior<CommandMessa
                             // change the behavior to online
                             return behavior(commandResponseManager, templateHcd, Boolean.FALSE, loggerFactory);
                         });
+
         return builder.build();
     }
 

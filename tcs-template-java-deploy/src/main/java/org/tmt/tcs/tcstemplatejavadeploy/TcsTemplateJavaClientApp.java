@@ -40,5 +40,9 @@ public class TcsTemplateJavaClientApp {
         CommandResponse resp2 = cf2.get();
         System.out.println("datum: " + resp2);
 
+        CompletableFuture<CommandResponse> cf3 = tcsTemplateJavaClient.move(maybeObsId, "BOTH", 2.34, 5.67);
+        CommandResponse resp3 = cf3.get();
+        System.out.println("move: " + resp3);
+
     }
 }

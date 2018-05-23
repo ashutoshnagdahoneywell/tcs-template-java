@@ -13,7 +13,7 @@ public class JEventHandlerActor extends Behaviors.MutableBehavior<JEventHandlerA
 
 
     // add messages here
-    static interface EventMessage {}
+    interface EventMessage {}
 
     public static final class EventPublishMessage implements EventMessage { }
 

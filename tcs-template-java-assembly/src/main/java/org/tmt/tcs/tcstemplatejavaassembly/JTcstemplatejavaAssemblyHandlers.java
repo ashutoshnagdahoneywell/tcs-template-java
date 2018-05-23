@@ -137,8 +137,13 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
 
         } else if (trackingEvent instanceof LocationRemoved) {
             // do something for the tracked location when it is no longer available
+            templateHcd = Optional.empty();
         }
 
+        // send messages to command handler and monitor actors
+        commandHandlerActor.tell(new JCommandHandlerActor.UpdateTemplateHcdMessage(templateHcd));
+
+        monitorActor.tell(new JMonitorActor.LocationEventMessage(templateHcd));
 
     }
 
