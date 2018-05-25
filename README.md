@@ -10,6 +10,7 @@ This project implements a TCS template Assembly using TMT Common Software
 * tcs-template-java-deploy - for starting/deploying the Assembly and HCD
 * tcs-template-java-client - a client app that sends commands to the Assembly
 
+
 ## Examples in the template
 
 This template shows working examples of:
@@ -19,7 +20,8 @@ a. immediate completion
 b. query/subscribe for long running commands
 c. submitting a set of messages, returning a single final response
 4. Loading and using configuration with the configuration service
-5. Client app to exercise the assembly commands
+5. HCD to Assembly CurrentState publish/subscribe
+6. Client app to exercise the assembly commands
 
 
 ##  Documentation
@@ -158,18 +160,14 @@ cd tcs-assembly/target/universal/stage/bin
 
 The client app is not part of the CSW template.  It was added with the following steps:
 
-1. Add the tcs-template-client project directory to the tcs-template project
-2. Add tcs-template-client to build.sbt and project/Dependencies.scala
+1. Add the tcs-template-java-client project directory to the tcs-template-java project
+2. Add tcs-template-java-client to build.sbt and project/Dependencies.scala
 3. Add the App object code to tcs-template-java-deploy/src/main/scala/org.tmt.tcs.tcstemplatejavadeploy as TcsTemplateJavaClientApp.scala.  This is the same location as the container starting apps.
 4. Sbt build stage on the project will create the necessary scripts with jar dependencies to target/universal/stage/bin
 
-#### Running
 
-TBD
 
-### Run using the REPL
 
-TBD
 
 
 

@@ -5,6 +5,7 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.ReceiveBuilder;
 
+import csw.messages.params.states.CurrentState;
 import csw.services.command.javadsl.JCommandService;
 import csw.services.logging.javadsl.ILogger;
 import csw.services.logging.javadsl.JLoggerFactory;
@@ -52,6 +53,15 @@ public class JMonitorActor extends Behaviors.MutableBehavior<JMonitorActor.Monit
         }
     }
 
+    public static final class CurrentStateEventMessage implements MonitorMessage {
+
+        public final CurrentState currentState;
+
+        public CurrentStateEventMessage(CurrentState currentState) {
+            this.currentState = currentState;
+        }
+    }
+
 
     private ActorContext<MonitorMessage> actorContext;
     private JLoggerFactory loggerFactory;
@@ -95,7 +105,12 @@ public class JMonitorActor extends Behaviors.MutableBehavior<JMonitorActor.Monit
                         message -> {
                             log.info("LocationEventMessage Received");
                             return onLocationEventMessage(message);
-                        });
+                        })
+                .onMessage(CurrentStateEventMessage.class,
+                message -> {
+                    log.info("CurrentStateEventMessage Received");
+                    return onCurrentStateEventMessage(message);
+                });
         return builder.build();
     }
 
@@ -103,7 +118,7 @@ public class JMonitorActor extends Behaviors.MutableBehavior<JMonitorActor.Monit
 
         if (message.templateHcd.isPresent() ) {
 
-             if (assemblyState == AssemblyState.Disconnected) {
+            if (assemblyState == AssemblyState.Disconnected) {
                 // TODO: this logic is oversimplified: just because the state is no longer disconnected, does not mean it is Ready
                 return JMonitorActor.behavior(AssemblyState.Ready, assemblyMotionState, loggerFactory);
             } else {
@@ -113,6 +128,19 @@ public class JMonitorActor extends Behaviors.MutableBehavior<JMonitorActor.Monit
             // if templateHcd is null, then change state to disconnected
             return JMonitorActor.behavior(AssemblyState.Disconnected, assemblyMotionState, loggerFactory);
         }
+    }
+
+    private Behavior<MonitorMessage> onCurrentStateEventMessage(CurrentStateEventMessage message) {
+
+        log.info("current state handler");
+
+        CurrentState currentState = message.currentState;
+
+        log.info("current state = " + currentState);
+
+        // here the Monitor Actor can change its state depending on the current state of the HCD
+        return JMonitorActor.behavior(assemblyState, assemblyMotionState, loggerFactory);
+
     }
 
 

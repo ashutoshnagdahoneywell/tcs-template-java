@@ -2,10 +2,10 @@ package org.tmt.tcs.tcstemplatejavaassembly;
 
 import akka.actor.ActorRefFactory;
 import akka.actor.typed.ActorRef;
-import akka.actor.typed.ActorSystem;
+
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Adapter;
-import akka.stream.ActorMaterializer;
+
 import akka.stream.Materializer;
 import com.typesafe.config.Config;
 import csw.framework.exceptions.FailureStop;
@@ -18,7 +18,8 @@ import csw.messages.location.*;
 import csw.messages.scaladsl.TopLevelActorMessage;
 import csw.services.command.javadsl.JCommandService;
 import csw.services.command.scaladsl.CommandResponseManager;
-import csw.services.command.scaladsl.CommandService;
+
+import csw.services.command.scaladsl.CurrentStateSubscription;
 import csw.services.config.api.javadsl.IConfigClientService;
 import csw.services.config.api.models.ConfigData;
 import csw.services.config.client.internal.ActorRuntime;
@@ -27,12 +28,7 @@ import csw.services.config.client.javadsl.JConfigClientFactory;
 import csw.services.location.javadsl.ILocationService;
 import csw.services.logging.javadsl.ILogger;
 import csw.services.logging.javadsl.JLoggerFactory;
-import scala.None;
-import scala.Option;
-import scala.concurrent.Await;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
@@ -64,6 +60,8 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
 
     // reference to the template HCD
     private Optional<JCommandService> templateHcd = Optional.empty();  // NOTE the use of Optional
+
+    private Optional<CurrentStateSubscription> subscription = Optional.empty();
 
     JTcstemplatejavaAssemblyHandlers(
             ActorContext<TopLevelActorMessage> ctx,
@@ -134,10 +132,16 @@ public class JTcstemplatejavaAssemblyHandlers extends JComponentHandlers {
 
             templateHcd = Optional.of(new JCommandService(hcdLocation, actorContext.getSystem()));
 
+            // set up Hcd CurrentState subscription to be handled by the monitor actor
+            subscription = Optional.of(templateHcd.get().subscribeCurrentState(currentState ->
+                    monitorActor.tell(new JMonitorActor.CurrentStateEventMessage(currentState))));
 
         } else if (trackingEvent instanceof LocationRemoved) {
             // do something for the tracked location when it is no longer available
             templateHcd = Optional.empty();
+            // FIXME: not sure if this is necessary
+            subscription.get().unsubscribe();
+
         }
 
         // send messages to command handler and monitor actors

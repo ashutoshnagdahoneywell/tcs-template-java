@@ -1,5 +1,6 @@
 package org.tmt.tcs.tcstemplatejavahcd;
 
+import akka.actor.typed.ActorRef;
 import akka.actor.typed.javadsl.ActorContext;
 import csw.framework.javadsl.JComponentHandlers;
 import csw.framework.scaladsl.CurrentStatePublisher;
@@ -31,6 +32,7 @@ public class JTcstemplatejavaHcdHandlers extends JComponentHandlers {
     private ActorContext<TopLevelActorMessage> actorContext;
     private ILocationService locationService;
     private ComponentInfo componentInfo;
+    ActorRef<JStatePublisherActor.StatePublisherMessage> statePublisherActor;
 
     JTcstemplatejavaHcdHandlers(
           ActorContext<TopLevelActorMessage> ctx,
@@ -47,11 +49,20 @@ public class JTcstemplatejavaHcdHandlers extends JComponentHandlers {
         this.actorContext = ctx;
         this.locationService = locationService;
         this.componentInfo = componentInfo;
+
+        // create the assembly's components
+        statePublisherActor =
+                ctx.spawnAnonymous(JStatePublisherActor.behavior(currentStatePublisher, loggerFactory));
+
     }
 
     @Override
     public CompletableFuture<Void> jInitialize() {
         return CompletableFuture.runAsync(() -> {
+
+            JStatePublisherActor.StartMessage message = new JStatePublisherActor.StartMessage();
+
+            statePublisherActor.tell(message);
 
         });
     }
